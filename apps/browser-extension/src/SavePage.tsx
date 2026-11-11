@@ -15,7 +15,6 @@ import { StatusMessage } from "./components/StatusMessage";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
-import { hasHostPermission } from "./utils/permissions";
 import usePluginSettings from "./utils/settings";
 import {
   capturePageWithSingleFile,
@@ -130,10 +129,10 @@ export default function SavePage() {
       bookmark.type === BookmarkTypes.LINK &&
       !bookmark.precrawledArchiveId &&
       currentTabUrl !== undefined &&
-      bookmark.url === currentTabUrl &&
-      // The `<all_urls>` host permission is optional and only granted when the
-      // user opts in to client-side crawling; it may have been revoked since.
-      (await hasHostPermission())
+      // No host permission needed: opening the popup (toolbar button, context
+      // menu or shortcut) grants `activeTab` for this tab, which is enough to
+      // inject the capture script into it.
+      bookmark.url === currentTabUrl
     ) {
       try {
         setIsCapturing(true);

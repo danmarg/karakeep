@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Laptop, LogOut, Moon, Sun, SunMoon } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -8,11 +8,6 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Switch } from "./components/ui/switch";
 import Spinner from "./Spinner";
-import {
-  hasHostPermission,
-  removeHostPermission,
-  requestHostPermission,
-} from "./utils/permissions";
 import usePluginSettings, {
   DEFAULT_BADGE_CACHE_EXPIRE_MS,
 } from "./utils/settings";
@@ -34,39 +29,11 @@ export default function OptionsPage() {
   const { settings, setSettings } = usePluginSettings();
   const { setTheme, theme } = useTheme();
 
-  // `<all_urls>` is an optional host permission that the user grants when they
-  // opt in to client-side crawling. Keep the switch in sync with whether it's
-  // actually granted (it can be revoked from the browser's extension settings).
-  const [hostPermissionGranted, setHostPermissionGranted] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    hasHostPermission().then((granted) => {
-      if (!cancelled) setHostPermissionGranted(granted);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const clientSideCrawlingEnabled =
-    settings.useSingleFile && hostPermissionGranted;
-
-  const onToggleClientSideCrawling = async (checked: boolean) => {
-    if (checked) {
-      // Must run synchronously off the user gesture — don't await anything else
-      // before requesting the permission.
-      const granted = await requestHostPermission();
-      if (!granted) {
-        return;
-      }
-      setHostPermissionGranted(true);
-      await setSettings((s) => ({ ...s, useSingleFile: true }));
-    } else {
-      await setSettings((s) => ({ ...s, useSingleFile: false }));
-      await removeHostPermission();
-      setHostPermissionGranted(false);
-    }
-  };
+  // Client-side crawling needs no extra permission: saving from the popup
+  // grants `activeTab` for the page being saved, which is all the capture uses.
+  const clientSideCrawlingEnabled = settings.useSingleFile;
+  const onToggleClientSideCrawling = (checked: boolean) =>
+    setSettings((s) => ({ ...s, useSingleFile: checked }));
 
   const { data: whoami, error: whoAmIError } = useQuery(
     api.users.whoami.queryOptions(undefined, {
@@ -174,7 +141,7 @@ export default function OptionsPage() {
               </span>
             </span>
           }
-          description="Capture the page in your browser, exactly as you see it. Slower, and needs permission to read pages you save."
+          description="Capture the page in your browser, exactly as you see it, when you save it. Slower."
         >
           <Switch
             checked={clientSideCrawlingEnabled}
